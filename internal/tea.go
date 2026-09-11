@@ -2,6 +2,7 @@ package internal
 
 import (
 	tea "charm.land/bubbletea/v2"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/sahilm/fuzzy"
 )
 
@@ -17,6 +18,7 @@ type Model struct {
 	offset         int
 	maxVisible     int // 0 = auto-detect from terminal height
 	terminalHeight int
+	terminalWidth  int
 
 	flagLoop       bool
 }
@@ -103,6 +105,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tea.WindowSizeMsg:
 		m.terminalHeight = msg.Height
+		m.terminalWidth = msg.Width
 		m.keepSelectedVisible()
 
 	case tea.KeyPressMsg:
@@ -166,7 +169,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m Model) View() tea.View {
 	var out string
 
-	out += "> " + m.query + "\n\n"
+	out += m.center(m.query) + "\n\n"
 
 	start := m.offset
 	end := start + m.visibleCount()
@@ -181,10 +184,21 @@ func (m Model) View() tea.View {
 		if i == m.selected {
 			prefix = "> "
 		}
-		out += prefix + match.Str + "\n"
+		out += m.center(prefix + match.Str) + "\n"
 	}
 	v := tea.NewView(out)
 	// fullscreen / alternate screen
 	v.AltScreen = true
 	return v
+}
+
+func (m Model) center(s string) string {
+	if m.terminalWidth <= 0 {
+		return s
+	}
+
+	return lipgloss.NewStyle().
+    Width(m.terminalWidth).
+		Align(lipgloss.Center).
+		Render(s)
 }
