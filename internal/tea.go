@@ -10,6 +10,7 @@ type Model struct {
 	selected int
 	items    []string
 	matches  []fuzzy.Match
+
 	Result   string
 	Quit     bool
 	flagLoop bool
