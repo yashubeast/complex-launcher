@@ -6,30 +6,72 @@ import (
 )
 
 type Model struct {
-	query    string
-	selected int
-	items    []string
-	matches  []fuzzy.Match
+	query          string
+	selected       int
+	items          []string
+	matches        []fuzzy.Match
 
-	Result   string
-	Quit     bool
-	flagLoop bool
+	Result         string
+	Quit           bool
+
+	offset         int
+	maxVisible     int // 0 = auto-detect from terminal height
+	terminalHeight int
+
+	flagLoop       bool
 }
 
 func (m *Model) reset() {
 	m.query = ""
 	m.selected = 0
+	m.offset = 0
 	m.filter()
 }
 
-func NewModel(items []string, loop bool) Model {
+func NewModel(items []string, loop bool, maxVisible int) Model {
 	m := Model{
 		items:    items,
 		selected: 0,
 		flagLoop: loop,
+		maxVisible: maxVisible,
 	}
 	m.filter()
 	return m
+}
+
+func (m *Model) visibleCount() int {
+	if m.maxVisible > 0 {
+		return m.maxVisible
+	}
+	// query line + blank line
+	n := m.terminalHeight - 2
+	if n < 1 {
+		return 1
+	}
+	return n
+}
+
+func (m *Model) keepSelectedVisible() {
+	visible := m.visibleCount()
+	if visible <= 0 { return }
+
+	if m.selected < m.offset {
+		m.offset = m.selected
+	}
+
+	if m.selected >= m.offset + visible {
+		m.offset = m.selected - visible + 1
+	}
+
+	maxOffset := max(len(m.matches) - visible, 0)
+
+	if m.offset > maxOffset {
+		m.offset = maxOffset
+	}
+
+	if m.offset < 0 {
+		m.offset = 0
+	}
 }
 
 // filter runs the fuzzy matcher against the curreny query
@@ -58,6 +100,11 @@ func (m Model) Init() tea.Cmd {
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+
+	case tea.WindowSizeMsg:
+		m.terminalHeight = msg.Height
+		m.keepSelectedVisible()
+
 	case tea.KeyPressMsg:
 		switch msg.String() {
 
@@ -71,11 +118,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "up", "ctrl+k":
 			if m.selected > 0 {
 				m.selected--
+				m.keepSelectedVisible()
 			}
 
 		case "down", "ctrl+j":
 			if m.selected < len(m.matches) - 1 {
 				m.selected++
+				m.keepSelectedVisible()
 			}
 
 		case "backspace":
@@ -119,7 +168,15 @@ func (m Model) View() tea.View {
 
 	out += "> " + m.query + "\n\n"
 
-	for i, match := range m.matches {
+	start := m.offset
+	end := start + m.visibleCount()
+
+	if end > len(m.matches) {
+		end = len(m.matches)
+	}
+
+	for i := start; i < end; i++ {
+		match := m.matches[i]
 		prefix := "  "
 		if i == m.selected {
 			prefix = "> "

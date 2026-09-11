@@ -12,6 +12,7 @@ import (
 
 func main() {
 	flagLoop := flag.Bool("loop", false, "restart the TUI continously, persistent TUI")
+	flagHeight := flag.Int("height", 0, "maximum number of visible options (0 = dynamic terminal height)")
 	flag.Parse()
 
 	var items []string
@@ -36,7 +37,7 @@ func main() {
 	defer tty.Close()
 
 	p := tea.NewProgram(
-		internal.NewModel(items, *flagLoop),
+		internal.NewModel(items, *flagLoop, *flagHeight),
 		tea.WithInput(tty),
 	)
 
