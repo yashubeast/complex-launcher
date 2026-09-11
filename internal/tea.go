@@ -12,12 +12,20 @@ type Model struct {
 	matches  []fuzzy.Match
 	Result   string
 	Quit     bool
+	flagLoop bool
 }
 
-func NewModel(items []string) Model {
+func (m *Model) reset() {
+	m.query = ""
+	m.selected = 0
+	m.filter()
+}
+
+func NewModel(items []string, loop bool) Model {
 	m := Model{
 		items:    items,
 		selected: 0,
+		flagLoop: loop,
 	}
 	m.filter()
 	return m
@@ -53,7 +61,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 
 		case "ctrl+c", "esc":
-			m.Quit = true
+			if m.flagLoop {
+				m.reset()
+				return m, nil
+			}
 			return m, tea.Quit
 
 		case "up", "ctrl+k":
@@ -67,8 +78,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 
 		case "backspace":
-			if len(m.query) > 0 {
-				m.query = m.query[:len(m.query) - 1]
+			runes := []rune(m.query)
+			if len(runes) > 0 {
+				m.query = string(runes[:len(runes)-1])
 				m.filter()
 			}
 
@@ -79,6 +91,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			} else {
 				// nothing matched: output whatever the query was
 				m.Result = m.query
+			}
+			if m.flagLoop {
+				m.reset()
+				return m, nil
 			}
 			return m, tea.Quit
 

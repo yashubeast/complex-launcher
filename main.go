@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"cl/internal"
+	"flag"
 	"fmt"
 	"os"
 
@@ -10,6 +11,9 @@ import (
 )
 
 func main() {
+	flagLoop := flag.Bool("loop", false, "restart the TUI continously, persistent TUI")
+	flag.Parse()
+
 	var items []string
 
 	// read stdio
@@ -26,13 +30,13 @@ func main() {
 
 	tty, err := os.Open("/dev/tty")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "cannot open terminal: ", err)
+		fmt.Fprintf(os.Stderr, "cannot open terminal: %v\n", err)
 		os.Exit(1)
 	}
 	defer tty.Close()
 
 	p := tea.NewProgram(
-		internal.NewModel(items),
+		internal.NewModel(items, *flagLoop),
 		tea.WithInput(tty),
 	)
 
