@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"cl/internal"
+	"cl/sources"
 	"flag"
 	"fmt"
 	"os"
@@ -17,17 +18,26 @@ func main() {
 
 	var items []string
 
-	// read stdio
-	scanner := bufio.NewScanner(os.Stdin)
-	// append each entry to items variable
-	for scanner.Scan() { items = append(items, scanner.Text()) }
-	// output error to stderr and exit, if scanner returned error
-	if err := scanner.Err(); err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+	if !stdinIsTty() {
+		readStdio(&items)
 	}
-	// exit if no items were given from stdin
-	if len(items) == 0 { return }
+
+	// use default source, if no items were given
+	// TODO: separate this with a --dmenu flag or something
+	if len(items) == 0 {
+		source := sources.PathSource{}
+
+		itemsAsItem, err := source.List()
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+
+		items = make([]string, len(itemsAsItem))
+		for i, item := range itemsAsItem {
+			items[i] = item.Name
+		}
+	}
 
 	tty, err := os.Open("/dev/tty")
 	if err != nil {
@@ -52,5 +62,29 @@ func main() {
 	final := finalModel.(internal.Model)
 	if !final.Quit {
 		fmt.Println(final.Result)
+	}
+}
+
+func stdinIsTty() bool {
+	info, err := os.Stdin.Stat()
+	if err != nil {
+		return false
+	}
+	return info.Mode()&os.ModeCharDevice != 0
+}
+
+func readStdio(items *[]string) {
+	// read stdio
+	scanner := bufio.NewScanner(os.Stdin)
+
+	// append each entry to items variable
+	for scanner.Scan() {
+		*items = append(*items, scanner.Text())
+	}
+
+	// output error to stderr and exit, if scanner returned error
+	if err := scanner.Err(); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
 	}
 }
