@@ -172,19 +172,25 @@ func (m Model) View() tea.View {
 	out += m.center(m.query) + "\n\n"
 
 	start := m.offset
-	end := start + m.visibleCount()
+	end := min(start + m.visibleCount(), len(m.matches))
 
-	if end > len(m.matches) {
-		end = len(m.matches)
-	}
+	selectedStyle := lipgloss.NewStyle().
+	  Width(m.terminalWidth).
+		Background(lipgloss.Color("255")).
+		Foreground(lipgloss.Color("0")).
+		Align(lipgloss.Center)
+
+	normalStyle := lipgloss.NewStyle().
+	  Width(m.terminalWidth).
+		Align(lipgloss.Center)
 
 	for i := start; i < end; i++ {
 		match := m.matches[i]
-		prefix := "  "
+		style := normalStyle
 		if i == m.selected {
-			prefix = "> "
+			style = selectedStyle
 		}
-		out += m.center(prefix + match.Str) + "\n"
+		out += style.Render(match.Str) + "\n"
 	}
 	v := tea.NewView(out)
 	// fullscreen / alternate screen
