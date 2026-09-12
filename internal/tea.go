@@ -189,14 +189,21 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if selected.PrefixExecuteType != "" {
 					err := executePrefix(selected)
 					// TODO: handle errors properly
-					if err != nil { m.Result = err.Error() }
-
+					if err != nil {
+						m.Result = err.Error()
+					}
 					return m.handleFlagLoop()
 				}
+
+				// app item
 				err := executeApp(selected)
 				if err != nil {
 					m.Result = err.Error()
+					return m.handleFlagLoop()
 				}
+
+				// dmenu item
+				m.Result = selected.Name
 				return m.handleFlagLoop()
 			}
 			// no matches: user entered random text
