@@ -27,6 +27,7 @@ type Model struct {
 	terminalWidth  int
 
 	flagLoop       bool
+	dmenuMode      bool
 }
 
 func (m *Model) reset() {
@@ -36,12 +37,13 @@ func (m *Model) reset() {
 	m.filter()
 }
 
-func NewModel(items []string, loop bool, maxVisible int, prefixes []sources.Prefix) Model {
+func NewModel(items []string, loop bool, maxVisible int, prefixes []sources.Prefix, dmenuMode bool) Model {
 	idkItems := sources.GetItems(items)
 	m := Model{
 		items:    idkItems,
 		selected: 0,
 		flagLoop: loop,
+		dmenuMode: dmenuMode,
 		maxVisible: maxVisible,
 		defaultItems: idkItems,
 		prefixSource: &sources.PrefixSource{ Prefixes: prefixes },
@@ -191,13 +193,19 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 					return m.handleFlagLoop()
 				}
-				// TODO: handle apps
 				// something matched: output the selected item
+				// TODO: handle apps
 				m.Result = m.matches[m.selected].Str
-			} else {
-				// nothing matched: output whatever the query was
-				m.Result = m.query
+				return m.handleFlagLoop()
 			}
+			// no matches: user entered random text
+			if !m.dmenuMode && m.query != "" {
+				if err := executeCopyAndNotify("%s", m.query); err != nil {
+					m.Result = err.Error()
+				}
+			}
+			// dmenu mode still returns the raw query
+			m.Result = m.query
 			return m.handleFlagLoop()
 
 		default:

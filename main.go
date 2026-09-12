@@ -60,7 +60,7 @@ func main() {
 	// initiate the model
 
 	p := tea.NewProgram(
-		internal.NewModel(items, *flagLoop, *flagHeight, prefixes),
+		internal.NewModel(items, *flagLoop, *flagHeight, prefixes, dmenuMode),
 		tea.WithInput(tty),
 	)
 
