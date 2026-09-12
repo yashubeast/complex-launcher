@@ -193,9 +193,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 					return m.handleFlagLoop()
 				}
-				// something matched: output the selected item
-				// TODO: handle apps
-				m.Result = m.matches[m.selected].Str
+				err := executeApp(selected)
+				if err != nil {
+					m.Result = err.Error()
+				}
 				return m.handleFlagLoop()
 			}
 			// no matches: user entered random text
