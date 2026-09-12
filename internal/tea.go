@@ -9,25 +9,26 @@ import (
 )
 
 type Model struct {
-	query          string
-	selected       int
-	items          []sources.Item
-	matches        []fuzzy.Match
+	query           string
+	selected        int
+	items           []sources.Item
+	matches         []fuzzy.Match
 
 	// TODO: assign default items according to user's selected default source
-	defaultItems   []sources.Item
-	prefixSource   *sources.PrefixSource
+	defaultItems    []sources.Item
+	prefixSource    *sources.PrefixSource
 
-	Result         string
-	Quit           bool
+	Result          string
+	Quit            bool
 
-	offset         int
-	maxVisible     int // 0 = auto-detect from terminal height
-	terminalHeight int
-	terminalWidth  int
+	offset          int
+	maxVisible      int // 0 = auto-detect from terminal height
+	terminalHeight  int
+	terminalWidth   int
 
-	flagLoop       bool
-	dmenuMode      bool
+	windowClassName string
+	flagLoop        bool
+	dmenuMode       bool
 }
 
 func (m *Model) reset() {
@@ -37,7 +38,7 @@ func (m *Model) reset() {
 	m.filter()
 }
 
-func NewModel(items []sources.Item, loop bool, maxVisible int, prefixes []sources.Prefix, dmenuMode bool) Model {
+func NewModel(items []sources.Item, loop bool, maxVisible int, config Config, dmenuMode bool) Model {
 	m := Model{
 		items:    items,
 		selected: 0,
@@ -45,7 +46,8 @@ func NewModel(items []sources.Item, loop bool, maxVisible int, prefixes []source
 		dmenuMode: dmenuMode,
 		maxVisible: maxVisible,
 		defaultItems: items,
-		prefixSource: &sources.PrefixSource{ Prefixes: prefixes },
+		prefixSource: &sources.PrefixSource{ Prefixes: config.Prefixes },
+		windowClassName: config.WindowClassName,
 	}
 	m.filter()
 	return m
@@ -155,11 +157,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 
 		case "ctrl+c", "esc":
-			if m.flagLoop {
-				m.reset()
-				return m, nil
-			}
-			return m, tea.Quit
+			return m.handleFlagLoop()
 
 		case "up", "ctrl+k":
 			if m.selected > 0 {
@@ -181,6 +179,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 
 		case "enter":
+			// this is here for SUPER ULTRA FAST closing time, when you press enter :D
+			hideWindowWithClass(m.windowClassName)
 			if len(m.matches) > 0 {
 				selected := m.items[m.matches[m.selected].Index]
 
@@ -203,7 +203,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 				// dmenu item
 				m.Result = selected.Name
-				return m.handleFlagLoop()
+			  return m.handleFlagLoop()
 			}
 			// no matches: user entered random text
 			if !m.dmenuMode && m.query != "" {
@@ -213,6 +213,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			// dmenu mode still returns the raw query
 			m.Result = m.query
+			// yes im aware that this closes the window TWICE, but who gives a fuck
 			return m.handleFlagLoop()
 
 		default:
@@ -231,6 +232,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) handleFlagLoop() (tea.Model, tea.Cmd) {
+	hideWindowWithClass(m.windowClassName)
 	if m.flagLoop {
 		m.reset()
 		return m, nil

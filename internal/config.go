@@ -8,28 +8,35 @@ import (
 	"path/filepath"
 )
 
-func LoadPrefixConfig() ([]sources.Prefix, error) {
+type Config struct {
+	TerminalCommand string           `json:"terminal_command"`
+	WindowClassName string           `json:"window_class_name"`
+	Prefixes        []sources.Prefix `json:"prefixes"`
+}
+
+func LoadConfig() (Config, error) {
 	configDir, err := os.UserConfigDir()
-	if err != nil { return nil, err }
+	if err != nil { return Config{}, err }
 
 	// TODO: generate a default config, if none exist
 	configPath := filepath.Join(
 		configDir,
 		"complex-launcher",
-		"prefixes.json",
+		"config.json",
 	)
 	data, err := os.ReadFile(configPath)
-	if err != nil { return nil, err }
+	if err != nil { return Config{}, err }
 
-	var config sources.PrefixConfig
+	var config Config
 
 	err = json.Unmarshal(data, &config)
 	if err != nil {
-		return nil, fmt.Errorf(
-			"invalid prefix config: %w",
+		return Config{}, fmt.Errorf(
+			"invalid config: %w",
 			err,
 		)
 	}
 
-	return config.Prefixes, nil
+	config.TerminalCommand = fmt.Sprintf(config.TerminalCommand, config.WindowClassName)
+	return config, nil
 }

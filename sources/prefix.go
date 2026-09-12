@@ -9,9 +9,6 @@ type Prefix struct {
 	GetItems     func(string) []Item `json:"-"`
 	ExecuteType  string              `json:"execute_type"`
 }
-type PrefixConfig struct {
-	Prefixes []Prefix `json:"prefixes"`
-}
 
 type PrefixSource struct {
 	Prefixes []Prefix

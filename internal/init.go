@@ -14,9 +14,9 @@ type Flags struct {
 	Height int
 }
 
-func Run(flags Flags) error {
+func Run(config Config, flags Flags) error {
 	items, dmenu, err := loadItems()
-	if err != nil { return nil }
+	if err != nil { return err }
 
 	tty, err := os.Open("/dev/tty")
 	if err != nil {
@@ -24,15 +24,12 @@ func Run(flags Flags) error {
 	}
 	defer tty.Close()
 
-	prefixes, err := LoadPrefixConfig()
-	if err != nil { return err }
-
 	program := tea.NewProgram(
 		NewModel(
 			items,
 			flags.Loop,
 			flags.Height,
-			prefixes,
+			config,
 			dmenu,
 		),
 		tea.WithInput(tty),
