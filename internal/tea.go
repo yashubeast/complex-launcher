@@ -1,6 +1,8 @@
 package internal
 
 import (
+	"cl/sources"
+
 	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/sahilm/fuzzy"
@@ -9,8 +11,12 @@ import (
 type Model struct {
 	query          string
 	selected       int
-	items          []string
+	items          []sources.Item
 	matches        []fuzzy.Match
+
+	// TODO: assign default items according to user's selected default source
+	defaultItems   []sources.Item
+	prefixSource   *sources.PrefixSource
 
 	Result         string
 	Quit           bool
@@ -30,12 +36,15 @@ func (m *Model) reset() {
 	m.filter()
 }
 
-func NewModel(items []string, loop bool, maxVisible int) Model {
+func NewModel(items []string, loop bool, maxVisible int, prefixes []sources.Prefix) Model {
+	idkItems := sources.GetItems(items)
 	m := Model{
-		items:    items,
+		items:    idkItems,
 		selected: 0,
 		flagLoop: loop,
 		maxVisible: maxVisible,
+		defaultItems: idkItems,
+		prefixSource: &sources.PrefixSource{ Prefixes: prefixes },
 	}
 	m.filter()
 	return m
@@ -78,22 +87,55 @@ func (m *Model) keepSelectedVisible() {
 
 // filter runs the fuzzy matcher against the curreny query
 func (m *Model) filter() {
+	// if prefixSource is enabled check for prefix
+	if m.prefixSource != nil {
+		m.prefixSource.Query = m.query
+		// fetch prefix items, halt on error
+		prefixItems, err := m.prefixSource.List()
+		if err != nil {
+			m.matches = nil
+			return
+		}
+
+		// if we have prefixItems then show those
+		if prefixItems != nil {
+			m.items = prefixItems
+			// show all prefix items, no fuzzy matching
+			m.matches = make([]fuzzy.Match, len(m.items))
+			for i := range m.items {
+				m.matches[i] = fuzzy.Match{
+					Str: m.items[i].Name,
+					Index: i,
+				}
+			}
+			m.resetSelection()
+			return
+		}
+		// otherwise regular fuzzy filtering
+		m.items = m.defaultItems
+	}
+
+	// initial item source
 	if m.query == "" {
 		m.matches = make([]fuzzy.Match, len(m.items))
 
 		for i := range m.items {
 			m.matches[i] = fuzzy.Match{
-				Str: m.items[i],
+				Str: m.items[i].Name,
 				Index: i,
 			}
 		}
 	} else {
-		m.matches = fuzzy.Find(m.query, m.items)
+		names := sources.GetNames(m.items)
+		m.matches = fuzzy.Find(m.query, names)
 	}
-
+	m.resetSelection()
+}
+func (m *Model) resetSelection() {
 	if m.selected >= len(m.matches) {
 		m.selected = 0
 	}
+	m.offset = 0
 }
 
 func (m Model) Init() tea.Cmd {
@@ -139,17 +181,24 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case "enter":
 			if len(m.matches) > 0 {
+				selected := m.items[m.matches[m.selected].Index]
+
+				// prefix item
+				if selected.PrefixExecuteType != "" {
+					err := executePrefix(selected)
+					// TODO: handle errors properly
+					if err != nil { m.Result = err.Error() }
+
+					return m.handleFlagLoop()
+				}
+				// TODO: handle apps
 				// something matched: output the selected item
 				m.Result = m.matches[m.selected].Str
 			} else {
 				// nothing matched: output whatever the query was
 				m.Result = m.query
 			}
-			if m.flagLoop {
-				m.reset()
-				return m, nil
-			}
-			return m, tea.Quit
+			return m.handleFlagLoop()
 
 		default:
 			s := msg.String()
@@ -164,6 +213,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	}
 	return m, nil
+}
+
+func (m Model) handleFlagLoop() (tea.Model, tea.Cmd) {
+	if m.flagLoop {
+		m.reset()
+		return m, nil
+	}
+	return m, tea.Quit
 }
 
 func (m Model) View() tea.View {

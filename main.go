@@ -39,6 +39,8 @@ func main() {
 		}
 	}
 
+	// initiate tty
+
 	tty, err := os.Open("/dev/tty")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "cannot open terminal: %v\n", err)
@@ -46,8 +48,18 @@ func main() {
 	}
 	defer tty.Close()
 
+	// fetch config
+
+	prefixes, err := internal.LoadPrefixConfig()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+
+	// initiate the model
+
 	p := tea.NewProgram(
-		internal.NewModel(items, *flagLoop, *flagHeight),
+		internal.NewModel(items, *flagLoop, *flagHeight, prefixes),
 		tea.WithInput(tty),
 	)
 
