@@ -3,7 +3,6 @@ package internal
 import (
 	"cl/sources"
 	"fmt"
-	"net/url"
 	"os/exec"
 	"strings"
 )
@@ -41,7 +40,7 @@ func executePrefix(item sources.Item) error {
 func executeUrl(mappedValue string, input string) error {
 	target := fmt.Sprintf(
 		mappedValue,
-		url.QueryEscape(input),
+		input,
 	)
 
 	return exec.Command(
