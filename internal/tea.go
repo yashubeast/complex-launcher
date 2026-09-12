@@ -37,15 +37,14 @@ func (m *Model) reset() {
 	m.filter()
 }
 
-func NewModel(items []string, loop bool, maxVisible int, prefixes []sources.Prefix, dmenuMode bool) Model {
-	idkItems := sources.GetItems(items)
+func NewModel(items []sources.Item, loop bool, maxVisible int, prefixes []sources.Prefix, dmenuMode bool) Model {
 	m := Model{
-		items:    idkItems,
+		items:    items,
 		selected: 0,
 		flagLoop: loop,
 		dmenuMode: dmenuMode,
 		maxVisible: maxVisible,
-		defaultItems: idkItems,
+		defaultItems: items,
 		prefixSource: &sources.PrefixSource{ Prefixes: prefixes },
 	}
 	m.filter()

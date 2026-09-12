@@ -2,7 +2,7 @@
 
 CLASS="complex-launcher"
 TERMINAL_CMD=(
-  st -c "$CLASS" -g "100x80"
+  st -c "$CLASS" -g "20x10" -e cl -loop
 )
 
 # find the first matching window
