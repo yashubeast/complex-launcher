@@ -5,9 +5,14 @@ import "strings"
 type Prefix struct {
 	PrefixString string              `json:"prefix"`
 
-	ItemMap      map[string]string   `json:"items"`
+	Items        []item              `json:"items"`
 	GetItems     func(string) []Item `json:"-"`
 	ExecuteType  string              `json:"execute_type"`
+}
+
+type item struct {
+	Name string `json:"name"`
+	Cmd string `json:"cmd"`
 }
 
 type PrefixSource struct {
@@ -29,13 +34,11 @@ func (s *PrefixSource) List() ([]Item, error) {
 			return prefix.GetItems(input), nil
 		}
 		// otherwise generate items from ItemMap
-		items := make([]Item, 0, len(prefix.ItemMap))
-		// TODO: these need to be sorted otherwise they just shuffle like mohammed ali as you type
-		// probably use the same order as defined in the config, so users can have custom order
-		for name, cmd := range prefix.ItemMap {
+		items := make([]Item, 0, len(prefix.Items))
+		for _, item := range prefix.Items {
 			items = append(items, Item{
-				Name: name,
-				Cmd: cmd,
+				Name: item.Name,
+				Cmd: item.Cmd,
 				PrefixExecuteType: prefix.ExecuteType,
 				PrefixInput: input,
 			})
