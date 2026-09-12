@@ -18,7 +18,8 @@ func main() {
 
 	var items []string
 
-	if !stdinIsTty() {
+	dmenuMode := !stdinIsTty()
+	if dmenuMode {
 		readStdio(&items)
 	}
 
@@ -72,7 +73,7 @@ func main() {
 	// only print after bubble tea exist
 	// this means we're back on the normal terminal screen
 	final := finalModel.(internal.Model)
-	if !final.Quit {
+	if dmenuMode && !final.Quit {
 		fmt.Println(final.Result)
 	}
 }

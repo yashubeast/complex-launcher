@@ -33,6 +33,8 @@ func (s *PrefixSource) List() ([]Item, error) {
 		}
 		// otherwise generate items from ItemMap
 		items := make([]Item, 0, len(prefix.ItemMap))
+		// TODO: these need to be sorted otherwise they just shuffle like mohammed ali as you type
+		// probably use the same order as defined in the config, so users can have custom order
 		for name, cmd := range prefix.ItemMap {
 			items = append(items, Item{
 				Name: name,
