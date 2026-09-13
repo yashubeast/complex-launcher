@@ -1,10 +1,15 @@
 package sources
 
-import "strings"
+import (
+	"fmt"
+	"strings"
+
+	"github.com/expr-lang/expr"
+)
 
 type Prefix struct {
 	PrefixString string              `json:"prefix"`
-
+	Kind         string              `json:"kind"`
 	Items        []item              `json:"items"`
 	GetItems     func(string) []Item `json:"-"`
 	ExecuteType  string              `json:"execute_type"`
@@ -29,6 +34,10 @@ func (s *PrefixSource) List() ([]Item, error) {
 		)
 		if !ok { continue }
 
+		// Prefix.Kind takes priority
+		if prefix.Kind == "calculator" {
+			return getCalculatorItems(input, prefix.ExecuteType)
+		}
 		// GetItems takes priority
 		if prefix.GetItems != nil {
 			return prefix.GetItems(input), nil
@@ -46,4 +55,41 @@ func (s *PrefixSource) List() ([]Item, error) {
 		return items, nil
 	}
 	return nil, nil
+}
+
+func getCalculatorItems(input, executeType string) ([]Item, error) {
+	dummyItemList := []Item{
+		{ Name: "..." },
+		{ Name: input + " = ..." },
+	}
+	input = strings.TrimSpace(input)
+	if input == "" { return dummyItemList, nil }
+
+	result, err := calculate(input)
+	if err != nil { return dummyItemList, nil }
+
+	return []Item{
+		{
+			Name:              result,
+			Cmd:               "%s",
+			PrefixExecuteType: executeType,
+			PrefixInput:       result,
+		},
+		{
+			Name:              input + " = " + result,
+			Cmd:               "%s",
+			PrefixExecuteType: executeType,
+			PrefixInput:       input + " = " + result,
+		},
+	}, nil
+}
+
+func calculate(input string) (string, error) {
+	program, err := expr.Compile(input)
+	if err != nil { return "", err }
+
+	value, err := expr.Run(program, nil)
+	if err != nil { return "", err }
+
+	return fmt.Sprint(value), nil
 }
